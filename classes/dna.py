@@ -194,7 +194,7 @@ class DNA:
                 print(f"|  {str(k):^3}  | {names.get(k):^10} |   {v:^7}  | First: {first:<3} & Last: {last:>3}  |")
         print("-"*62)
     
-    def transcript(self,sequence):
+    def transcribe(self,sequence):
         '''
             Input: a DNA sequence
             Output: a list of mRNAs
@@ -204,29 +204,42 @@ class DNA:
         codons = self.decipher(sequence.upper()) 
         
         # Second, define coding segments in the DNA sequence
-        start_pos = self.getPositionList('ATG')
-        stop_pos = []
-        for pos,codon in codons.items():
-            if codon in self.stop:
-                stop_pos.append(pos)
-        # if no stop codon in the DNA sequence
-        if stop_pos == []:
-            stop_pos = [len(codons.values())]
+        try:
+            start_pos = self.getPositionList('ATG')
+
+            stop_pos = []
+            for pos,codon in codons.items():
+                if codon in self.stop:
+                    stop_pos.append(pos)
+            # if no stop codon in the DNA sequence
+            if stop_pos == []:
+                stop_pos = [len(codons.values())]
+            
+            coding_regions = dict(zip(start_pos,stop_pos))
+            
+            # Third, retrieve coding DNA sequence from start and stop positions
+            pre_mRNAs = []
+            for start,stop in coding_regions.items():
+                pre_mRNA = self.getSubsequence(start,stop)
+                pre_mRNA = pre_mRNA.replace("T","U")
+                pre_mRNAs.append(pre_mRNA)
+            
+            mRNAs = "".join(pre_mRNAs) # this is biologically incorrect because we need to remove non-coding regions within each pre_mRNA before generating mRNA
         
-        coding_regions = dict(zip(start_pos,stop_pos))
+            return mRNAs
         
-        # Third, retrieve coding DNA sequence from start and stop positions
-        pre_mRNAs = []
-        for start,stop in coding_regions.items():
-            pre_mRNA = self.getSubsequence(start,stop)
-            pre_mRNA = pre_mRNA.replace("T","U")
-            pre_mRNAs.append(pre_mRNA)
-        
-        mRNAs = "".join(pre_mRNAs) # this is biologically incorrect because we need to remove non-coding regions within each pre_mRNA before generating mRNA
-        
-        return mRNAs
+        except KeyError:
+            print("Start Loss Mutation Occured")
+            return sequence
+
 
     def translate(self,mRNA):
+        # When start loss mutation occured, it likely already failed to generate mRNA
+        # return the DNA sequence without translation
+        if 'T' in mRNA:
+            print("Failed to create protein")
+            return mRNA
+        
         codons = self.decipher(mRNA)
         amino_acids = self.getAminoAcidName('rna',codons.values())
         for codon,aa in amino_acids.items():
@@ -235,7 +248,8 @@ class DNA:
             elif aa == 'Incomplete':
                 amino_acids[codon] = ''
             else:
-                amino_acids[codon]= aa[0].upper()
+                #amino_acids[codon] = amino_acids[codon]+"-"
+                amino_acids[codon]= aa[0].upper()+aa[1:]
         
         aa = []
         for codon in codons.values():
@@ -243,7 +257,92 @@ class DNA:
 
         proteins ="".join(aa)
         return proteins
+    
+    def alterSNP(self,original_sequence='ATGTAG'):
+        '''
+            Description: A synthetic Single Nucleotide Polymorphism function 
+            Input: a DNA sequence
+            Output: the original sequence and its mutated sequence
+        '''
+        # Classify bases based on its chemical structures
+        heterocyclic_bases = { 'purine':{'A','G'},'pyrimidine':{'T','C'}}
 
+        # Convert the sequence for the alternation step
+        genome = list(original_sequence.upper()) # e.g. 'ATGTAG' => ['A', 'T', 'G', 'T', 'A', 'G']
+
+        # Decide number of mutation randomly (it cannot exceed length of DNA sequence)
+        import random
+        times = random.randint(1,len(genome))
+        #print(f"Potential number of mutations: {times}")
+
+        snp_location = 0 # start from the first nucleotide
+        substitution_types = []
+        
+        while times>0:
+            # First, pick a random single nucleotide 
+            random_nucleotide = random.choice(self.nucleotides)
+
+            # Then, select a random single base from the sequence (Starting point at index 0)
+            snp_location = snp_location + random.randint(1,len(original_sequence)-1) # first loop: 0 + random int
+            # if the random location surpasses the length of the DNA sequence, then break the loop
+            if snp_location >= len(original_sequence):
+                break
+
+            # else continue single nucleotide mutation
+            ## replace only if the random nucleotide differs from the original nucleotide
+            if random_nucleotide != genome[snp_location]:
+                bases = set([genome[snp_location],random_nucleotide])
+                
+                # highlight the base that gets changed
+                RED ='\033[91m'
+                RESET = '\033[0m'
+                genome_string_before = "".join(genome[:snp_location])
+                genome_string_after = "".join(genome[(snp_location+1):])
+                print(f"Original DNA: {genome_string_before}[{RED}{genome[snp_location]}{RESET}]{genome_string_after}")
+                print(f'Mutation at {snp_location+1}: {genome[snp_location]} -> {random_nucleotide}')
+                
+                # Replace the selected single base with the new base
+                genome[snp_location] = random_nucleotide
+
+                # highlight the base that got changed
+                genome_string_before = "".join(genome[:snp_location])
+                genome_string_after = "".join(genome[(snp_location+1):])
+                print(f"Mutated DNA: {genome_string_before}[{RED}{genome[snp_location]}{RESET}]{genome_string_after}")
+
+                ## then, label SNP substitution
+                #### Transition: purine <-> purine, pyrimidine <-> pyrimidine
+                #### Transversion: purine <-> pyrimidine 
+                same_heterocyclic_base = bases in heterocyclic_bases.values()
+                if same_heterocyclic_base:
+                    substitution_types.append('transition')
+                else:
+                    substitution_types.append('transversion')
+            
+            # Reduce count
+            times = times-1
+            
+        mutated_genome = "".join(genome)
+        return substitution_types, original_sequence, mutated_genome
+
+    def synthesizeProtein(self,dna_sequence):
+        print(f"DNA: {dna_sequence}")
+
+        #transcribe DNA to mRNA
+        mRNA = self.transcribe(dna_sequence)
+        if 'T' in mRNA:
+            #this means, start loss mutation occured. Failed to create protein
+            return "Incomplete"
+        
+        print(f"Coresponding mRNA: {mRNA}")
+        self.printStatistics('rna',mRNA)
+        
+        #translate mRNA to Protein
+        protein = self.translate(mRNA)
+        print(f"Protein: {protein}")
+        print("_"*100)
+        print()
+
+        return protein
     # def labelMutation(self,mutation):
     #     mutation_type = ["synonymous","missense","nonsense"]
 

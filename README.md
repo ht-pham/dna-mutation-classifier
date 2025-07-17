@@ -9,5 +9,5 @@ DNA mutations are changes in one or more nucleotide of a DNA sequence. Some are 
 Key concepts:
 * Reference sequence: normal DNA
 * Alternate sequence: mutated DNA
-* Variant Consequences: frameshift, missense, nonsense
+* Variant Consequences: synonymous, missense, nonsense
 * Pathogenicity: disease-causing or not

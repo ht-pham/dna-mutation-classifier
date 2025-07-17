@@ -10,25 +10,45 @@ from classes.lambda_dna import LambdaGenome
 
 if __name__ == "__main__":
     # Parent class
-    # Example: a randomly generated DNA sequence
+    # Example: a randomly generated DNA sequence of random length
     random_dna = DNA()
     random_len = random.randint(0,10000)
     random_seq = random_dna.generate(random_len)
-    codons = random_dna.decipher(random_seq)
     print(f"Generated random DNA sequence: {random_seq}")
+    
+    # Break the randomly generated DNA sequence down to codons and their positions in the sequence
+    codons = random_dna.decipher(random_seq)
     random_dna.printStatistics('dna',random_seq)
+   
+    # Protein synthesize Transcribe to mRNA, then translate to protein
+    original_protein = random_dna.synthesizeProtein(random_seq)
+    """ 
+    ### PROTEIN SYNTHESIS
     # Transcript the random DNA
-    print("Transcripting DNA to mRNA...")
+    print("Transcripting from original DNA to mRNA...")
     mRNA = random_dna.transcript(random_seq)
     print(f"mRNA: {mRNA}")
-    random_dna.printStatistics('rna',random_dna.transcript(random_seq))
+    random_dna.printStatistics('rna',mRNA)
     
     # Translate the mRNA to protein
     protein = random_dna.translate(mRNA)
     print(f"Protein: {protein}")
     
     print("_"*100)
-    print()
+    print() 
+    
+    """
+    # Syntheticize the generated DNA (i.e. computationally generate mutated DNA)
+    substitutions,_ , mutated_seq = random_dna.alterSNP(random_seq)
+    #print(f"Mutated DNA sequence: {mutated_seq}")
+    print(f"SNP substitution types: {substitutions}")
+    random_dna.printStatistics('dna',mutated_seq)
+    mutated_protein = random_dna.synthesizeProtein(mutated_seq)
+    
+    print(f"Original protein: {original_protein}")
+    print(f"Mutated protein: {mutated_protein}")
+    protein_changed = 'no' if original_protein == mutated_protein else 'yes'
+    print(f"Was protein changed?: {protein_changed} ")
     
     
     # Child class
@@ -47,8 +67,8 @@ if __name__ == "__main__":
     print(f"Left cos site: {left_cos_site}")
     print(f"Sample: {lambda_genome[:100]}")
     lambda_dna.printStatistics('dna',lambda_genome)
-    print(f"mRNA of Lambda Phage: \n{lambda_dna.transcript(lambda_genome)}")
-    lambda_dna.printStatistics('rna',lambda_dna.transcript(lambda_genome))
+    print(f"mRNA of Lambda Phage (only first coding region): \n{lambda_dna.transcribe(lambda_genome)[:54]}")
+    lambda_dna.printStatistics('rna',lambda_dna.transcribe(lambda_genome))
 
     # Look up 1: Find codon at specific order
     prompt = int(input("Enter the order (1-16168) of the codon: "))

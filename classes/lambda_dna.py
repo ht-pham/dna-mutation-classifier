@@ -51,5 +51,8 @@ class LambdaGenome(DNA):
         # print(f"Number of amino acids: {len(set(codons.values()))}")
         return super().printStatistics(nucleoic_acid,sequence)
     
-    def transcript(self,sequence):
-        return super().transcript(sequence)
+    def transcribe(self,sequence):
+        return super().transcribe(sequence)
+    
+    def alterSNP(self, original_sequence='ATGTAG'):
+        return super().alterSNP(original_sequence)
