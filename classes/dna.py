@@ -88,11 +88,11 @@ class DNA:
             Output: a dictionary of 3-base codons in the DNA sequence
         '''
         #self.sequence = dna_sequence
-        self.codons = []
+        codons = []
         for i in range(0,len(sequence),3):
-            self.codons.append(sequence[i:i+3])
+            codons.append(sequence[i:i+3])
             #print(f"{dna_sequence[i:i+3]}",end=" ")
-        self.codons = dict(zip(range(1,len(self.codons)+1),self.codons))
+        self.codons = dict(zip(range(1,len(codons)+1),codons))
         return self.codons
     
     def setPositionList(self,codons_dict):
@@ -142,7 +142,7 @@ class DNA:
     
     def getAminoAcidName(self,nucleic_acid,codons):
         '''
-            Input: a set of amino acids in the DNA sequence
+            Input: a set of codons in the DNA sequence
             Output: A list of Amino Acids' Names based on the Amino Acid's Name Chart
         '''
         table = self.dna_amino_acids_chart if nucleic_acid.upper() == 'dna'.upper() else self.rna_amino_acids_chart
@@ -276,6 +276,31 @@ class DNA:
         proteins ="".join(aa)
         return proteins
     
+    def synthesizeProtein(self,dna_sequence):
+        #print(f"DNA: {dna_sequence}")
+        print("DNA",end=" ")
+        self.display('dna',dna_sequence)
+
+        #transcribe DNA to mRNA
+        mRNA = self.transcribe(dna_sequence)
+        if 'T' in mRNA:
+            #this means, start loss mutation occured. Failed to create protein
+            return "Incomplete"
+        
+        print("mRNA",end=" ")
+        self.display('rna',mRNA)
+        #print(f"Coresponding mRNA: {mRNA}")
+        #self.printStatistics('rna',mRNA)
+        
+        #translate mRNA to Protein
+        protein = self.translate(mRNA)
+        print(f"Protein: {protein}")
+        print("_"*100)
+        print()
+
+        return protein
+    
+    
     def alterSNP(self,original_sequence='ATGTAG'):
         '''
             Description: A synthetic Single Nucleotide Polymorphism function 
@@ -342,30 +367,35 @@ class DNA:
         mutated_genome = "".join(genome)
         return substitution_types, original_sequence, mutated_genome
 
-    def synthesizeProtein(self,dna_sequence):
-        #print(f"DNA: {dna_sequence}")
-        print("DNA",end=" ")
-        self.display('dna',dna_sequence)
-
-        #transcribe DNA to mRNA
-        mRNA = self.transcribe(dna_sequence)
-        if 'T' in mRNA:
-            #this means, start loss mutation occured. Failed to create protein
-            return "Incomplete"
+    def findMutations(self,original_sequence, mutated_genome):
+        '''
+            Description: find the codon position(s) and their original and their new codons and amino acids
+            Input: old DNA sequence, new DNA sequence
+            Output: a dictionary of codon positions and their changes.
+                {pos_mutation:{codon:[original codon,new codon],aa:{original aa, new aa}}}
+        '''
+        original_codons = self.decipher(original_sequence)
+        self.codons = {} # reset self.codons values
+        mutated_codons = self.decipher(mutated_genome)
         
-        print("mRNA",end=" ")
-        self.display('rna',mRNA)
-        #print(f"Coresponding mRNA: {mRNA}")
-        #self.printStatistics('rna',mRNA)
+        pos_mutations = []
+        for codon_pos in original_codons.keys():
+            if original_codons[codon_pos] != mutated_codons[codon_pos]:
+                pos_mutations.append(codon_pos)
+        # print(pos_mutations)
         
-        #translate mRNA to Protein
-        protein = self.translate(mRNA)
-        print(f"Protein: {protein}")
-        print("_"*100)
-        print()
-
-        return protein
+        # dict = {pos_mutation:{codon:[original codon,new codon],aa:{original aa, new aa}}}
+        mutations = {}
+        for codon_pos in pos_mutations:
+            old = original_codons[codon_pos]
+            new = mutated_codons[codon_pos]
+            aa = self.getAminoAcidName('dna',[old,new])
+            mutations[codon_pos]={'codon':[old,new],'amino':list(aa.values())}
+    
+        
+        #print(mutations)
+        return mutations
+        
+        
     # def labelMutation(self,mutation):
     #     mutation_type = ["synonymous","missense","nonsense"]
-
-    
