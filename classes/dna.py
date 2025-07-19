@@ -85,7 +85,7 @@ class DNA:
     def decipher(self,sequence):
         '''
             Input: a DNA/RNA sequence as string type
-            Output: a list of 3-base codons in the DNA sequence
+            Output: a dictionary of 3-base codons in the DNA sequence
         '''
         #self.sequence = dna_sequence
         self.codons = []
@@ -178,6 +178,24 @@ class DNA:
 
         return amino_names, stats, position_list
     
+    def display(self,nucleic_acid,sequence):
+        self.codons = self.decipher(sequence)
+        aa = self.getAminoAcidName(nucleic_acid,set(self.codons.values()))
+        print("Codon Sequence:")
+        for i in range(1,len(self.codons.values())+1):
+            if i == len(self.codons.values()):
+                print(f"[{i}] {self.codons[i]}")
+            else:
+                print(f"[{i}] {self.codons[i]}",end=" -> ")
+        
+        print("Amino Acids:")
+        three_bases = list(self.codons.values())
+        for i in range(0,len(self.codons.values())):
+            if i == len(self.codons.values())-1:
+                print(f"[{i+1}] {aa[three_bases[i]]}")
+            else:
+                print(f"[{i+1}] {aa[three_bases[i]]}",end=" -> ")
+
     def printStatistics(self,nucleic_acid,sequence):
         print("Statistics:")
         names, stats, position_list = self.countAll(nucleic_acid,sequence) 
@@ -325,7 +343,9 @@ class DNA:
         return substitution_types, original_sequence, mutated_genome
 
     def synthesizeProtein(self,dna_sequence):
-        print(f"DNA: {dna_sequence}")
+        #print(f"DNA: {dna_sequence}")
+        print("DNA",end=" ")
+        self.display('dna',dna_sequence)
 
         #transcribe DNA to mRNA
         mRNA = self.transcribe(dna_sequence)
@@ -333,8 +353,10 @@ class DNA:
             #this means, start loss mutation occured. Failed to create protein
             return "Incomplete"
         
-        print(f"Coresponding mRNA: {mRNA}")
-        self.printStatistics('rna',mRNA)
+        print("mRNA",end=" ")
+        self.display('rna',mRNA)
+        #print(f"Coresponding mRNA: {mRNA}")
+        #self.printStatistics('rna',mRNA)
         
         #translate mRNA to Protein
         protein = self.translate(mRNA)
