@@ -12,14 +12,14 @@ class LambdaGenome(DNA):
 
     def load_from_file(self):
         from Bio import SeqIO
-        record = SeqIO.parse("data/GCA_000840245.1.fasta", "fasta")
+        record = SeqIO.parse("data/lambda_genome.fasta", "fasta")
         self.sequence = next(record).seq
         
-    def load_genome(self,file_path="data/GCA_000840245.1.fasta"):
+    def load_genome(self,file_path="data/lambda_genome.fasta"):
         return super().load_genome(file_path)
 
     def getSequence(self):
-        _,self.sequence = super().load_genome("data/GCA_000840245.1.fasta")
+        _,self.sequence = super().load_genome("data/lambda_genome.fasta")
         return self.sequence
     
     def generate(self, num_nucleotides):

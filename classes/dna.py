@@ -29,6 +29,7 @@ class DNA:
         # Basic codons
         self.start = 'ATG'
         self.stop = ['TAG','TGA','TAA']
+
         self.sequence = self.start
 
         self.codons = []
@@ -117,10 +118,13 @@ class DNA:
             Input: a specific codon e.g. 'GCG'
             Output: the list of all positions/orders of that codon appearing in the DNA
         '''
+        try:
+            positions = self.setPositionList(self.codons)
+            return positions[codon.upper()]
         
-        positions = self.setPositionList(self.codons)
-        return positions[codon.upper()]
-
+        except KeyError:
+            print("Error occured: Wrong typo or Codon does not exist in the genome.")
+            return []
 
     def getSubsequence(self,first,last):
         '''
@@ -130,7 +134,7 @@ class DNA:
         subseq = []
         for i in range(first,last+1):
             subseq.append(self.codons[i])
-
+    
         return "".join(subseq)
 
     def getAminoAcidAt(self,codon_index):
@@ -181,20 +185,33 @@ class DNA:
     def display(self,nucleic_acid,sequence):
         self.codons = self.decipher(sequence)
         aa = self.getAminoAcidName(nucleic_acid,set(self.codons.values()))
+        RED ='\033[91m'
+        GREEN = '\033[32m'
+        RESET = '\033[0m'
         print("Codon Sequence:")
         for i in range(1,len(self.codons.values())+1):
             if i == len(self.codons.values()):
-                print(f"[{i}] {self.codons[i]}")
+                print(f"[{i}] {RED}{self.codons[i]}{RESET}")
             else:
-                print(f"[{i}] {self.codons[i]}",end=" -> ")
+                if self.codons[i] in self.stop or self.codons[i] in ['UAG','UGA','UAA']:
+                    print(f"[{i}] {RED}{self.codons[i]}{RESET}",end=" -> ")
+                elif self.codons[i] == 'ATG' or self.codons[i] == 'AUG':
+                    print(f"[{i}] {GREEN}{self.codons[i]}{RESET}",end=" -> ")
+                else:
+                    print(f"[{i}] {self.codons[i]}",end=" -> ")
         
         print("Amino Acids:")
         three_bases = list(self.codons.values())
         for i in range(0,len(self.codons.values())):
             if i == len(self.codons.values())-1:
-                print(f"[{i+1}] {aa[three_bases[i]]}")
+                print(f"[{i+1}] {RED}{aa[three_bases[i]]}{RESET}")
             else:
-                print(f"[{i+1}] {aa[three_bases[i]]}",end=" -> ")
+                if aa[three_bases[i]] == 'stop':
+                    print(f"[{i+1}] {RED}{aa[three_bases[i]]}{RESET}",end=" -> ")
+                elif aa[three_bases[i]] == 'met':
+                    print(f"[{i+1}] {GREEN}{aa[three_bases[i]]}{RESET}",end=" -> ")
+                else:
+                    print(f"[{i+1}] {aa[three_bases[i]]}",end=" -> ")
 
     def printStatistics(self,nucleic_acid,sequence):
         print("Statistics:")
@@ -219,22 +236,96 @@ class DNA:
             Approach: Using Open Reading Frame (ORF) analysis
         '''
         # First, break down the sequence into codons
+
         codons = self.decipher(sequence.upper()) 
         
         # Second, define coding segments in the DNA sequence
+        start_pos = self.getPositionList('ATG')
+        #print(start_pos) # check if any
+        if start_pos == []:
+            print("Only non-coding region given: no start codon found")
+            print("Abort DNA transcription.")
+            return sequence
+        
         try:
-            start_pos = self.getPositionList('ATG')
-
+            # Original Approach
+            #---------------------------------
+            # stop_pos = []
+            # for pos,codon in codons.items():
+            #     if codon in self.stop:
+            #         stop_pos.append(pos)
+            #---------------------------------
             stop_pos = []
-            for pos,codon in codons.items():
-                if codon in self.stop:
-                    stop_pos.append(pos)
+            
+            # 2nd approach
+            # Choose the codon after the first start codon
+            pointer = start_pos[0]+1
+            index = 0
+            # Run from that codon to the last codon of the sequence
+            while pointer < len(codons.values()):
+                codon = codons[pointer]
+                if pointer in start_pos:
+                    pointer = pointer+1
+                    continue
+                if codon in self.stop and pointer not in stop_pos:
+                    stop_pos.append(pointer)
+                    # Move to the next start codon
+                    index = index + 1
+                    if index >= len(start_pos):
+                        break
+                    else: 
+                        if start_pos[index] < pointer:
+                            # Move to the next start codon
+                            index = index + 1
+                            pointer = start_pos[index]    
+                pointer = pointer+1
+            
+            # Test duplicates
+            # print(len(stop_pos)) 
+            # print(len(set(stop_pos)))
+
             # if no stop codon in the DNA sequence
             if stop_pos == []:
                 stop_pos = [len(codons.values())]
+        
+            #print(stop_pos)
+
+            # define coding regions
+            # Original Approach: Impractical
+            # coding_regions = dict(zip(start_pos,stop_pos))
+            # 2nd approach: 
+            # (1) Combine both lists into one list, 
+            # (2.1) remove the 'ATG' positions in between 'ATG' and stop codons
+            # (2.2) remove the stop codons' position following after stop codons (i.e. no start codon in between them)
+            # (3) Pair two adjacent elements to one dictionary
+            start_stop = sorted(start_pos+stop_pos)
+            #print(start_stop)
             
-            coding_regions = dict(zip(start_pos,stop_pos))
+            is_start = False # Flag to remove ATGs appearing within coding regions
             
+            for index,pos in enumerate(start_stop):
+                # if the previous codon is a stop codon and the current codon is a start
+                if pos in start_pos and is_start==False:
+                    # then change the flag
+                    is_start = True
+                # if the previous codon is a start codon and the current codon is a start    
+                elif pos in start_pos and is_start==True:
+                    # then pop the current codon out of the list
+                    start_stop[index] = 0
+                # if the current codon is a stop codon, then change the flag to False and keep the stop codon
+                elif pos in stop_pos and is_start==True:
+                    is_start = False
+                # if the previous codon is a stop codon and the stop codon is a start   
+                elif pos in stop_pos and is_start==False:
+                    start_stop[index] = 0
+            
+            start_stop = [x for x in start_stop if x != 0]
+            #print(len(start_stop))
+            #print(start_stop)
+            coding_regions = dict(zip(start_stop[::2],start_stop[1::2]))
+
+            #print(coding_regions)
+
             # Third, retrieve coding DNA sequence from start and stop positions
             pre_mRNAs = []
             for start,stop in coding_regions.items():
@@ -255,7 +346,7 @@ class DNA:
         # When start loss mutation occured, it likely already failed to generate mRNA
         # return the DNA sequence without translation
         if 'T' in mRNA:
-            print("Failed to create protein")
+            print("Only non-coding region: Failed to create protein")
             return mRNA
         
         codons = self.decipher(mRNA)
