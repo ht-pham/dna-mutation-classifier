@@ -44,7 +44,7 @@ class DNA:
             Output: Randomly generated DNA sequence with start codon as 'ATG'
         '''
         import random
-        
+        self.sequence = self.start
         choice = ""
         for i in range(num_nucleotides):
             last_nucleotide = self.sequence[-1:]
@@ -301,25 +301,29 @@ class DNA:
             start_stop = sorted(start_pos+stop_pos)
             #print(start_stop)
             
-            is_start = False # Flag to remove ATGs appearing within coding regions
+            is_coding = False # Flag to remove repeated start and stop codons
             
             for index,pos in enumerate(start_stop):
                 # if the previous codon is a stop codon and the current codon is a start
-                if pos in start_pos and is_start==False:
+                # (i.e. in non-coding region => in coding region)
+                if pos in start_pos and is_coding==False:
                     # then change the flag
-                    is_start = True
-                # if the previous codon is a start codon and the current codon is a start    
-                elif pos in start_pos and is_start==True:
+                    is_coding = True
+                # if the previous codon is a start codon and the current codon is a start 
+                # (i.e. already in coding region => mark as 0)   
+                elif pos in start_pos and is_coding==True:
                     # then pop the current codon out of the list
                     start_stop[index] = 0
-                # if the current codon is a stop codon, then change the flag to False and keep the stop codon
-                elif pos in stop_pos and is_start==True:
-                    is_start = False
-                # if the previous codon is a stop codon and the stop codon is a start   
-                elif pos in stop_pos and is_start==False:
+                # if the current codon is a stop codon in coding region, then change the flag to False
+                # (i.e. in coding region => in non-coding region)
+                elif pos in stop_pos and is_coding==True:
+                    is_coding = False
+                # if the previous codon is a stop codon and the current codon is a stop codon
+                # (i.e. already in non-coding region => mark as 0)
+                elif pos in stop_pos and is_coding==False:
                     start_stop[index] = 0
             
-            start_stop = [x for x in start_stop if x != 0]
+            start_stop = [x for x in start_stop if x != 0] # remove the repeated codons
             #print(len(start_stop))
             #print(start_stop)
             coding_regions = dict(zip(start_stop[::2],start_stop[1::2]))
@@ -392,14 +396,50 @@ class DNA:
         return protein
     
     
-    def alterSNP(self,original_sequence='ATGTAG'):
+    def alterSNP(self,type_of_SNP='random',original_sequence='ATGTAG'):
         '''
             Description: A synthetic Single Nucleotide Polymorphism function 
             Input: a DNA sequence
             Output: the original sequence and its mutated sequence
         '''
-        # Classify bases based on its chemical structures
-        heterocyclic_bases = { 'purine':{'A','G'},'pyrimidine':{'T','C'}}
+        def substitute(genome,snp_location,new_nucleotide):
+            # Classify bases based on its chemical structures
+            heterocyclic_bases = { 'purine':{'A','G'},'pyrimidine':{'T','C'}}
+            substitution_types = []
+
+            if new_nucleotide != genome[snp_location]:
+                bases = set([genome[snp_location],new_nucleotide])
+                
+                # highlight the base that gets changed
+                RED ='\033[91m'
+                RESET = '\033[0m'
+                genome_string_before = "".join(genome[:snp_location])
+                genome_string_after = "".join(genome[(snp_location+1):])
+                print(f"Original DNA: {genome_string_before}[{RED}{genome[snp_location]}{RESET}]{genome_string_after}")
+                #print(f'Mutation at {snp_location+1}: {genome[snp_location]} -> {new_nucleotide}')
+                
+                # Replace the selected single base with the new base
+                genome[snp_location] = new_nucleotide
+
+                # highlight the base that got changed
+                genome_string_before = "".join(genome[:snp_location])
+                genome_string_after = "".join(genome[(snp_location+1):])
+                print(f"Mutated DNA: {genome_string_before}[{RED}{genome[snp_location]}{RESET}]{genome_string_after}")
+                print()
+                ## then, label SNP substitution
+                #### Transition: purine <-> purine, pyrimidine <-> pyrimidine
+                #### Transversion: purine <-> pyrimidine 
+                same_heterocyclic_base = bases in heterocyclic_bases.values()
+                if same_heterocyclic_base:
+                    substitution_types.append('transition')
+                else:
+                    substitution_types.append('transversion')
+            
+            mutated_genome = "".join(genome)
+            
+            return substitution_types, mutated_genome
+        
+        import math
 
         # Convert the sequence for the alternation step
         genome = list(original_sequence.upper()) # e.g. 'ATGTAG' => ['A', 'T', 'G', 'T', 'A', 'G']
@@ -413,49 +453,44 @@ class DNA:
         substitution_types = []
         
         while times>0:
-            # First, pick a random single nucleotide 
-            random_nucleotide = random.choice(self.nucleotides)
-
-            # Then, select a random single base from the sequence (Starting point at index 0)
+            # First, select a random single base from the sequence (Starting point at index 0)
             snp_location = snp_location + random.randint(1,len(original_sequence)-1) # first loop: 0 + random int
             # if the random location surpasses the length of the DNA sequence, then break the loop
             if snp_location >= len(original_sequence):
                 break
-
-            # else continue single nucleotide mutation
-            ## replace only if the random nucleotide differs from the original nucleotide
-            if random_nucleotide != genome[snp_location]:
-                bases = set([genome[snp_location],random_nucleotide])
+            codon_pos = math.floor(snp_location/3)+1
+            # else move forward with single nucleotide mutation
+            # Second, pick a random single nucleotide if type_of_SNP is 'random'
+            if type_of_SNP=='random':
+                random_nucleotide = random.choice(['A','T','C','G'])
+                substitution_types,mutated_genome = substitute(genome,snp_location,random_nucleotide)
+            else:
+                all_SNPs = {}
+                all_SNPs[snp_location]=[]
+                mutated_genomes = []
+                substitution_types = []
+                for i,nucleotide in enumerate(self.nucleotides):
+                    substitution_type,mutated_genome = substitute(list(original_sequence.upper()),snp_location,nucleotide)
+                    aa_mutations = self.findMutations(original_sequence=original_sequence,mutated_genome=mutated_genome)
+                    if substitution_type != []:
+                        all_SNPs[snp_location].append([substitution_type,mutated_genome,aa_mutations[codon_pos]])
+                        mutated_genomes.append([snp_location,i+1,mutated_genome])
+                        substitution_types.append([snp_location,i+1,substitution_type])
+                    
+                mutated_genome = [x[2] for x in mutated_genomes]
+                #print(mutated_genome)
+                #print(substitution_types)
                 
-                # highlight the base that gets changed
-                RED ='\033[91m'
-                RESET = '\033[0m'
-                genome_string_before = "".join(genome[:snp_location])
-                genome_string_after = "".join(genome[(snp_location+1):])
-                print(f"Original DNA: {genome_string_before}[{RED}{genome[snp_location]}{RESET}]{genome_string_after}")
-                print(f'Mutation at {snp_location+1}: {genome[snp_location]} -> {random_nucleotide}')
-                
-                # Replace the selected single base with the new base
-                genome[snp_location] = random_nucleotide
-
-                # highlight the base that got changed
-                genome_string_before = "".join(genome[:snp_location])
-                genome_string_after = "".join(genome[(snp_location+1):])
-                print(f"Mutated DNA: {genome_string_before}[{RED}{genome[snp_location]}{RESET}]{genome_string_after}")
-
-                ## then, label SNP substitution
-                #### Transition: purine <-> purine, pyrimidine <-> pyrimidine
-                #### Transversion: purine <-> pyrimidine 
-                same_heterocyclic_base = bases in heterocyclic_bases.values()
-                if same_heterocyclic_base:
-                    substitution_types.append('transition')
-                else:
-                    substitution_types.append('transversion')
-            
+                # Print out purpose only
+                for num,case in enumerate(all_SNPs[snp_location]):
+                    print(f"Case {num+1}:")
+                    print(f"- Mutated gene: {case[1]}")
+                    print(f"- [{codon_pos}] {case[2]['codon'][0]} -> {case[2]['codon'][1]}: {case[2]['amino'][0]} -> {case[2]['amino'][1]}")
+                    
             # Reduce count
             times = times-1
-            
-        mutated_genome = "".join(genome)
+
+        
         return substitution_types, original_sequence, mutated_genome
 
     def findMutations(self,original_sequence, mutated_genome):
@@ -483,7 +518,6 @@ class DNA:
             aa = self.getAminoAcidName('dna',[old,new])
             mutations[codon_pos]={'codon':[old,new],'amino':list(aa.values())}
     
-        
         #print(mutations)
         return mutations
         

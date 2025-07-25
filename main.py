@@ -21,21 +21,46 @@ if __name__ == "__main__":
     original_protein = random_dna.synthesizeProtein(random_seq)
     
     # DNA Mutation: computationally mutate DNA from the generated DNA
-    substitutions,original_seq , mutated_seq = random_dna.alterSNP(random_seq)
-    #print(f"Mutated DNA sequence: {mutated_seq}")
+    # Case 1: Random case
+    substitutions,original_seq, mutated_seq = random_dna.alterSNP('random',random_seq)
     print(f"SNP substitution types: {substitutions}")
     aa_mutations = random_dna.findMutations(original_seq , mutated_seq)
     print(aa_mutations)
     print()
     # Protein synthesis on the mutated DNA:
     mutated_protein = random_dna.synthesizeProtein(mutated_seq)
-    
+
     # Inspect Protein Change
     print(f"Original protein: {original_protein}")
     print(f"Mutated protein: {mutated_protein}")
     protein_changed = 'no' if original_protein == mutated_protein else 'yes'
     print(f"Was protein changed?: {protein_changed} ")
     print('-'*100)
+
+    # Case 2: All case
+    all_case_seq = random_dna.generate(random.randint(0,10000))
+    print(f"Generated random DNA sequence: {all_case_seq}")
+    
+    # Protein synthesis: Transcribe DNA to mRNA, then translate to protein
+    original_protein = random_dna.synthesizeProtein(all_case_seq)
+    
+    # DNA Mutation: computationally mutate DNA from the generated DNA
+    substitutions,original_seq, mutated_seq = random_dna.alterSNP('all',all_case_seq)
+    # Protein synthesis on the mutated DNA:
+    for mutated_gene in mutated_seq:
+        print("Original ",end="")
+        random_dna.display('dna',all_case_seq)
+        print("Mutated ",end="")
+        mutated_protein = random_dna.synthesizeProtein(mutated_gene)
+        
+        # Inspect Protein Change
+        print(f"Original protein: {original_protein}")
+        print(f"Mutated protein: {mutated_protein}")
+        protein_changed = 'no' if original_protein == mutated_protein else 'yes'
+        print(f"Was protein changed?: {protein_changed} ")
+        print('-'*100)
+
+    
     
     # Test set 1: Immunitydeficiency45 / Gene ID: 3455
     header,ifnar2_gene = random_dna.load_genome("data/IFNAR2_datasets/ifnar2_gene.fna")
