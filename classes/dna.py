@@ -119,6 +119,7 @@ class DNA:
             Output: the list of all positions/orders of that codon appearing in the DNA
         '''
         try:
+            #codons = self.getSequence()
             positions = self.setPositionList(self.codons)
             return positions[codon.upper()]
         
@@ -185,33 +186,61 @@ class DNA:
     def display(self,nucleic_acid,sequence):
         self.codons = self.decipher(sequence)
         aa = self.getAminoAcidName(nucleic_acid,set(self.codons.values()))
-        RED ='\033[91m'
+        
+        # First start codon flag
+        first_start_codon = False
+        first_stop_codon = False
+
+        BACKGROUND_BRIGHT_RED = '\033[101m'
+        BACKGROUND_BRIGHT_GREEN = '\033[102m'
+        BACKGROUND_BRIGHT_WHITE = '\033[107m'
+        RED ='\033[31m'
+        BOLD_RED = '\u001b[91;1m'
         GREEN = '\033[32m'
+        BOLD_GREEN = '\u001b[92;1m'
         RESET = '\033[0m'
         print("Codon Sequence:")
         for i in range(1,len(self.codons.values())+1):
             if i == len(self.codons.values()):
-                print(f"[{i}] {RED}{self.codons[i]}{RESET}")
+                print(f"[{i}] {BOLD_RED}{self.codons[i]}{RESET}")
             else:
-                if self.codons[i] in self.stop or self.codons[i] in ['UAG','UGA','UAA']:
-                    print(f"[{i}] {RED}{self.codons[i]}{RESET}",end=" -> ")
-                elif self.codons[i] == 'ATG' or self.codons[i] == 'AUG':
-                    print(f"[{i}] {GREEN}{self.codons[i]}{RESET}",end=" -> ")
+                if (self.codons[i] in self.stop) or (self.codons[i] in ['UAG','UGA','UAA']):
+                    if first_start_codon == True and first_stop_codon == False: # First stop codon
+                        first_stop_codon = True   
+                        print(f"[{i}] {BOLD_RED}{BACKGROUND_BRIGHT_RED}{self.codons[i]}{RESET}",end=" -> ")
+                    else:
+                        print(f"[{i}] {RED}{self.codons[i]}{RESET}",end=" -> ")
+                elif (self.codons[i] == 'ATG') or (self.codons[i] == 'AUG'):
+                    if first_start_codon == False:
+                        first_start_codon = True
+                        print(f"[{i}] {BOLD_GREEN}{BACKGROUND_BRIGHT_GREEN}{self.codons[i]}{RESET}", end=" -> ")
+                    else:
+                        print(f"[{i}] {GREEN}{self.codons[i]}{RESET}",end=" -> ")
                 else:
                     print(f"[{i}] {self.codons[i]}",end=" -> ")
         
+        # First start codon flag
+        first_start_codon = False
+        first_stop_codon = False
         print("Amino Acids:")
-        three_bases = list(self.codons.values())
-        for i in range(0,len(self.codons.values())):
-            if i == len(self.codons.values())-1:
-                print(f"[{i+1}] {RED}{aa[three_bases[i]]}{RESET}")
+        for pos,codon in self.codons.items():
+            if pos == len(self.codons.values()):
+                print(f"[{pos}] {RED}{aa[codon]}{RESET}")
             else:
-                if aa[three_bases[i]] == 'stop':
-                    print(f"[{i+1}] {RED}{aa[three_bases[i]]}{RESET}",end=" -> ")
-                elif aa[three_bases[i]] == 'met':
-                    print(f"[{i+1}] {GREEN}{aa[three_bases[i]]}{RESET}",end=" -> ")
+                if aa[codon] == 'stop':
+                    if first_stop_codon == False:
+                        first_stop_codon = True   
+                        print(f"[{i}] {BOLD_RED}{BACKGROUND_BRIGHT_RED}{aa[codon]}{RESET}",end=" -> ")
+                    else:
+                        print(f"[{pos}] {RED}{aa[codon]}{RESET}",end=" -> ")
+                elif aa[codon] == 'met':
+                    if first_start_codon == False:
+                        first_start_codon = True
+                        print(f"[{i}] {BOLD_GREEN}{BACKGROUND_BRIGHT_GREEN}{aa[codon]}{RESET}", end=" -> ")
+                    else:
+                        print(f"[{i}] {GREEN}{aa[codon]}{RESET}",end=" -> ")
                 else:
-                    print(f"[{i+1}] {aa[three_bases[i]]}",end=" -> ")
+                    print(f"[{pos}] {aa[codon]}",end=" -> ")
 
     def printStatistics(self,nucleic_acid,sequence):
         print("Statistics:")
@@ -485,6 +514,7 @@ class DNA:
                 for num,case in enumerate(all_SNPs[snp_location]):
                     print(f"Case {num+1}:")
                     print(f"- Mutated gene: {case[1]}")
+                    print(f"- SNP Type: {case[0][0]}")
                     print(f"- [{codon_pos}] {case[2]['codon'][0]} -> {case[2]['codon'][1]}: {case[2]['amino'][0]} -> {case[2]['amino'][1]}")
                     
             # Reduce count

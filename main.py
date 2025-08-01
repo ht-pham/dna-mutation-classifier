@@ -8,27 +8,22 @@ import re
 from classes.dna import DNA
 from classes.lambda_dna import LambdaGenome
 
-
-if __name__ == "__main__":
-    # Parent class
+def run_random_case(dna=DNA(),sequence_len=random.randint(0,10000)):
     # Example: a randomly generated DNA sequence of random length
-    random_dna = DNA()
-    random_len = random.randint(0,10000)
-    random_seq = random_dna.generate(random_len)
+    random_seq = dna.generate(sequence_len)
     print(f"Generated random DNA sequence: {random_seq}")
+    dna.display('dna',random_seq)
     
     # Protein synthesis: Transcribe DNA to mRNA, then translate to protein
-    original_protein = random_dna.synthesizeProtein(random_seq)
-    
-    # DNA Mutation: computationally mutate DNA from the generated DNA
+    original_protein = dna.synthesizeProtein(random_seq)
     # Case 1: Random case
-    substitutions,original_seq, mutated_seq = random_dna.alterSNP('random',random_seq)
+    substitutions,original_seq, mutated_seq = dna.alterSNP('random',random_seq)
     print(f"SNP substitution types: {substitutions}")
-    aa_mutations = random_dna.findMutations(original_seq , mutated_seq)
+    aa_mutations = dna.findMutations(original_seq , mutated_seq)
     print(aa_mutations)
     print()
     # Protein synthesis on the mutated DNA:
-    mutated_protein = random_dna.synthesizeProtein(mutated_seq)
+    mutated_protein = dna.synthesizeProtein(mutated_seq)
 
     # Inspect Protein Change
     print(f"Original protein: {original_protein}")
@@ -37,50 +32,60 @@ if __name__ == "__main__":
     print(f"Was protein changed?: {protein_changed} ")
     print('-'*100)
 
-    # Case 2: All case
-    all_case_seq = random_dna.generate(random.randint(0,10000))
+def run_all_cases(dna=DNA(),sequence_len=random.randint(0,10000)):
+    all_case_seq = dna.generate(sequence_len)
     print(f"Generated random DNA sequence: {all_case_seq}")
     
     # Protein synthesis: Transcribe DNA to mRNA, then translate to protein
-    original_protein = random_dna.synthesizeProtein(all_case_seq)
+    original_protein = dna.synthesizeProtein(all_case_seq)
     
     # DNA Mutation: computationally mutate DNA from the generated DNA
-    substitutions,original_seq, mutated_seq = random_dna.alterSNP('all',all_case_seq)
+    substitutions,original_seq, mutated_seq = dna.alterSNP('all',all_case_seq)
     # Protein synthesis on the mutated DNA:
-    for mutated_gene in mutated_seq:
+    for i,mutated_gene in enumerate(mutated_seq):
         print("Original ",end="")
-        random_dna.display('dna',all_case_seq)
+        dna.display('dna',original_seq)
         print("Mutated ",end="")
-        mutated_protein = random_dna.synthesizeProtein(mutated_gene)
-        
+        mutated_protein = dna.synthesizeProtein(mutated_gene)
+
+        print(f"SNP Type: {substitutions[i][2][0]} at nucleotide #{substitutions[i][0]+1}")
         # Inspect Protein Change
         print(f"Original protein: {original_protein}")
         print(f"Mutated protein: {mutated_protein}")
         protein_changed = 'no' if original_protein == mutated_protein else 'yes'
         print(f"Was protein changed?: {protein_changed} ")
-        print('-'*100)
-
+        print('-'*100) 
     
-    
-    # Test set 1: Immunitydeficiency45 / Gene ID: 3455
-    header,ifnar2_gene = random_dna.load_genome("data/IFNAR2_datasets/ifnar2_gene.fna")
-    
+def load_and_run(dna=DNA(),file_path="data/covid.txt"):
+    header,sequence = dna.load_genome(file_path)
     headers = re.split(r'[>, ]',header)
-    #print(headers)
-    ifnar2_headers = {"Access ID":headers[1],"Name":headers[2],"Description":" ".join(headers[3:])}
-    for k,v in ifnar2_headers.items():
-        print(f"{k}: {v}")
+    header_df = {"Access ID":headers[1],"Name":headers[2],"Description":" ".join(headers[3:])}
+    #for k,v in header_df.items():
+    #    print(f"{k}: {v}")
 
-    #print(ifnar2_gene[35727:35818]) # second header
+    return header_df,sequence
+
+def covid_mini_program():
+    header,covid=load_and_run(DNA(),"data/covid.txt")
+    print(f"Access ID: {header['Access ID']}, Name & Description: {header['Name']} {header['Description']}")
+    #DNA().display('dna',covid[900:2000])
+    rna = DNA().synthesizeProtein(covid[900:2000])
+
+def ifnar2_mini_program():
+    # Test set 1: Immunitydeficiency45 / Gene ID: 3455
+    dna=DNA()
+    header,ifnar2_gene = load_and_run(dna,"data/IFNAR2_datasets/ifnar2_gene.fna")
+    print(f"Access ID: {header['Access ID']}, Name & Description:  {header['Name']} {header['Description']}")
+
     ifnar2_gene = "".join(ifnar2_gene[:35727]+ifnar2_gene[35818:])
-    print(f"First 102-nucleotide base of {ifnar2_headers['Name']} genome")
-    random_dna.display('dna',sequence=ifnar2_gene[:102])
+    print(f"First 102-nucleotide base of {header['Name']} genome")
+    dna.display('dna',sequence=ifnar2_gene[:102])
 
-    chromosome_21 = random_dna.countAll('dna',ifnar2_gene)
+    chromosome_21 = dna.countAll('dna',ifnar2_gene)
     first = int(input("Enter the first codon position of the subsequence: "))
     last = int(input("Enter the last codon position of the subsequence: "))
-    subsequence = random_dna.getSubsequence(first,last)
-    random_dna.display('dna',sequence=subsequence)
+    subsequence = dna.getSubsequence(first,last)
+    dna.display('dna',sequence=subsequence)
     print("_"*100)
     print()
     # Explore the first coding region and its rna
@@ -91,53 +96,45 @@ if __name__ == "__main__":
     # random_dna.display('rna',rna_ifnar2_first)
     # first_protein = random_dna.translate(rna_ifnar2_first)
     # print(f"Protein: {first_protein}")
-    ifnar2_first_protein = random_dna.synthesizeProtein(ifnar2_gene[585:624])
+    ifnar2_first_protein = dna.synthesizeProtein(ifnar2_gene[585:624])
     
-    rna_ifnar2 = random_dna.transcribe(ifnar2_gene)
+    rna_ifnar2 = dna.transcribe(ifnar2_gene)
     #random_dna.display('RNA',rna_ifnar2)
 
     
     print("Look up codons on RNA sequence of IFNAR2 gene (Chromosome 21):")
-    chromosome_21 = random_dna.countAll('rna',rna_ifnar2)
+    chromosome_21 = dna.countAll('rna',rna_ifnar2)
     prompt = input("Enter codon that you want to look up: (e.g. UAA, AUG, etc.): ")
-    print(random_dna.getPositionList(prompt))
+    print(dna.getPositionList(prompt))
     
     first = int(input("Enter the first codon position of the subsequence: "))
     last = int(input("Enter the last codon position of the subsequence: "))
-    subsequence = random_dna.getSubsequence(first,last)
-    random_dna.display('rna',sequence=subsequence)
+    subsequence = dna.getSubsequence(first,last)
+    dna.display('rna',sequence=subsequence)
     
     print("_"*100)
     print()
-    print("Full RNA of IFNAR2 genome")
-    random_dna.display('RNA',rna_ifnar2)
-    print("_"*100)
-    print()
+    #print("Full RNA of IFNAR2 genome")
+    #dna.display('RNA',rna_ifnar2)
     
-    # Test set 2: Lambda phage
+
+def lambda_mini_program():
     # Child class
     lambda_dna = LambdaGenome("Enterobacteria phage lambda",None) # create object for Lambda Genome class
     
-    # load .fasta file into a tuple (metadata, dna_sequence)
-    header,lambda_genome = lambda_dna.load_genome()
-    
-    # Get general info of the data from the .fasta file
-    headers = re.split(r'[>, ]',header)
-    lambda_headers = {"Access ID":headers[1],"Name":" ".join(headers[2:5]),"Description":" ".join(headers[5:])}
-    for k,v in lambda_headers.items():
-        print(f"{k}: {v}")
-    #lambda_dna.printStatistics('dna',lambda_genome)
-    
+    header,lambda_phage = load_and_run(lambda_dna,"data/lambda_genome.fasta")
+    print(f"Access ID: {header['Access ID']}, Name & Description:  {header['Name']} {header['Description']}")
+
     # Display 34 first codons
     print(f"First 34 codons",end=" ")
-    lambda_dna.display('dna',lambda_genome[:102])
+    lambda_dna.display('dna',lambda_phage[:102])
     
     # Display first coding region of mRNA
     print(f"mRNA of Lambda Phage (only first coding region)",end=" ")
-    lambda_dna.display('rna',lambda_dna.transcribe(lambda_genome)[:51])
+    lambda_dna.display('rna',lambda_dna.transcribe(lambda_phage)[:51])
     #lambda_dna.printStatistics('rna',lambda_dna.transcribe(lambda_genome))
     
-    codons = lambda_dna.countAll('dna',lambda_genome)
+    codons = lambda_dna.countAll('dna',lambda_phage)
     # Look up 1: Find codon at specific order
     prompt = int(input("Enter the order (1-16168) of the codon: "))
     print(lambda_dna.getAminoAcidAt(prompt))
@@ -149,10 +146,20 @@ if __name__ == "__main__":
     lambda_dna.display('dna',sequence=subsequence)
 
     # Look up 3: Find all positions of a specific codon on the DNA
-    mrna = lambda_dna.transcribe(lambda_genome)
+    mrna = lambda_dna.transcribe(lambda_phage)
     codons = lambda_dna.countAll('rna',mrna)
     prompt = input("Enter codon that you want to look up: (e.g. UAA, AUG, etc.): ")
     print(lambda_dna.getPositionList(prompt))
+
+if __name__ == "__main__":
+    # Parent class
+    # Example: a randomly generated DNA sequence of random length
+    run_random_case()
+    run_all_cases()
+
+    #covid_mini_program()
+    ifnar2_mini_program()
+    #lambda_mini_program()
     
     
     
